@@ -1,6 +1,6 @@
-# fabric-reduce-endorser-certs
+# Уменьшение размера транзакции в Hyperledger Fabric
 
-Спроектировано на основе беседы в Telegram сообществе Hyperledger Russia (https://t.me/hyperledger_russia).
+Спроектировано на основе беседы в Telegram сообществе Hyperledger Russia (https://t.me/hyperledger_russia) а так же https://github.com/ilyapt/fabric-certstore.
 
 ### Что это?
 Представленный код - эксперимент по сокращению транзакций в Hyperledger Fabric.
