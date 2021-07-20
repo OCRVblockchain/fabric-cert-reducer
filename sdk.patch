@@ -1,0 +1,108 @@
+From 11838508195c9ecd6ca12a4cef496383947bb9d0 Mon Sep 17 00:00:00 2001
+From: stdi0 <denis.kozlov94@icloud.com>
+Date: Tue, 20 Jul 2021 16:10:02 +0300
+Subject: [PATCH] patch
+
+---
+ pkg/client/channel/invoke/signature.go  | 12 +++++-------
+ pkg/client/channel/invoke/txnhandler.go | 10 +++++-----
+ pkg/client/resmgmt/resmgmt.go           |  8 ++++----
+ pkg/fab/channel/ledger.go               | 12 ++++++------
+ 4 files changed, 20 insertions(+), 22 deletions(-)
+
+diff --git a/pkg/client/channel/invoke/signature.go b/pkg/client/channel/invoke/signature.go
+index bc7ab397..bc545c07 100644
+--- a/pkg/client/channel/invoke/signature.go
++++ b/pkg/client/channel/invoke/signature.go
+@@ -9,8 +9,6 @@ package invoke
+ import (
+ 	"github.com/hyperledger/fabric-sdk-go/pkg/client/common/verifier"
+ 	"github.com/hyperledger/fabric-sdk-go/pkg/common/providers/fab"
+-
+-	"github.com/pkg/errors"
+ )
+ 
+ //NewSignatureValidationHandler returns a handler that validates an endorsement
+@@ -26,11 +24,11 @@ type SignatureValidationHandler struct {
+ //Handle for Filtering proposal response
+ func (f *SignatureValidationHandler) Handle(requestContext *RequestContext, clientContext *ClientContext) {
+ 	//Filter tx proposal responses
+-	err := f.validate(requestContext.Response.Responses, clientContext)
+-	if err != nil {
+-		requestContext.Error = errors.WithMessage(err, "signature validation failed")
+-		return
+-	}
++	//err := f.validate(requestContext.Response.Responses, clientContext)
++	//if err != nil {
++	//	requestContext.Error = errors.WithMessage(err, "signature validation failed")
++	//	return
++	//}
+ 
+ 	// Delegate to next step if any
+ 	if f.next != nil {
+diff --git a/pkg/client/channel/invoke/txnhandler.go b/pkg/client/channel/invoke/txnhandler.go
+index 83badef2..0324b5c2 100644
+--- a/pkg/client/channel/invoke/txnhandler.go
++++ b/pkg/client/channel/invoke/txnhandler.go
+@@ -124,11 +124,11 @@ type EndorsementValidationHandler struct {
+ func (f *EndorsementValidationHandler) Handle(requestContext *RequestContext, clientContext *ClientContext) {
+ 
+ 	//Filter tx proposal responses
+-	err := f.validate(requestContext.Response.Responses)
+-	if err != nil {
+-		requestContext.Error = errors.WithMessage(err, "endorsement validation failed")
+-		return
+-	}
++	//err := f.validate(requestContext.Response.Responses)
++	//if err != nil {
++	//	requestContext.Error = errors.WithMessage(err, "endorsement validation failed")
++	//	return
++	//}
+ 
+ 	//Delegate to next step if any
+ 	if f.next != nil {
+diff --git a/pkg/client/resmgmt/resmgmt.go b/pkg/client/resmgmt/resmgmt.go
+index 3f061c20..341f39c1 100644
+--- a/pkg/client/resmgmt/resmgmt.go
++++ b/pkg/client/resmgmt/resmgmt.go
+@@ -823,10 +823,10 @@ func (rc *Client) sendCCProposal(reqCtx reqContext.Context, ccProposalType chain
+ 	}
+ 
+ 	// Verify signature(s)
+-	err = rc.verifyTPSignature(channelService, txProposalResponse)
+-	if err != nil {
+-		return tp.TxnID, errors.WithMessage(err, "sending deploy transaction proposal failed to verify signature")
+-	}
++	//err = rc.verifyTPSignature(channelService, txProposalResponse)
++	//if err != nil {
++	//	return tp.TxnID, errors.WithMessage(err, "sending deploy transaction proposal failed to verify signature")
++	//}
+ 
+ 	eventService, err := channelService.EventService()
+ 	if err != nil {
+diff --git a/pkg/fab/channel/ledger.go b/pkg/fab/channel/ledger.go
+index b0edfa4c..9d098550 100644
+--- a/pkg/fab/channel/ledger.go
++++ b/pkg/fab/channel/ledger.go
+@@ -278,12 +278,12 @@ func filterResponses(responses []*fab.TransactionProposalResponse, errs error, v
+ 	filteredResponses := responses[:0]
+ 	for _, response := range responses {
+ 		if response.Status == http.StatusOK {
+-			if verifier != nil {
+-				if err := verifier.Verify(response); err != nil {
+-					errs = multi.Append(errs, errors.Errorf("failed to verify response from %s: %s", response.Endorser, err))
+-					continue
+-				}
+-			}
++			//if verifier != nil {
++			//	if err := verifier.Verify(response); err != nil {
++			//		errs = multi.Append(errs, errors.Errorf("failed to verify response from %s: %s", response.Endorser, err))
++			//		continue
++			//	}
++			//}
+ 			filteredResponses = append(filteredResponses, response)
+ 		} else {
+ 			errs = multi.Append(errs, errors.Errorf("bad status from %s (%d)", response.Endorser, response.Status))
+-- 
+2.25.1
+
