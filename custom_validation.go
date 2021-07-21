@@ -12,20 +12,17 @@ import (
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric-protos-go/common"
-	"github.com/hyperledger/fabric-protos-go/msp"
 	commonerrors "github.com/hyperledger/fabric/common/errors"
 	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/core/committer/txvalidator/v20/plugindispatcher"
 	validation "github.com/hyperledger/fabric/core/handlers/validation/api"
-	vc "github.com/hyperledger/fabric/core/handlers/validation/api/capabilities"
-	vi "github.com/hyperledger/fabric/core/handlers/validation/api/identities"
-	vp "github.com/hyperledger/fabric/core/handlers/validation/api/policies"
-	vs "github.com/hyperledger/fabric/core/handlers/validation/api/state"
+	. "github.com/hyperledger/fabric/core/handlers/validation/api/capabilities"
+	. "github.com/hyperledger/fabric/core/handlers/validation/api/identities"
+	. "github.com/hyperledger/fabric/core/handlers/validation/api/policies"
+	. "github.com/hyperledger/fabric/core/handlers/validation/api/state"
 	v12 "github.com/hyperledger/fabric/core/handlers/validation/builtin/v12"
 	v13 "github.com/hyperledger/fabric/core/handlers/validation/builtin/v13"
-	v20 "github.com/hyperledger/fabric/core/handlers/validation/builtin/v20"
-	"github.com/hyperledger/fabric/protoutil"
+	"github.com/hyperledger/fabric/protos/common"
+	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/pkg/errors"
 )
 
@@ -37,6 +34,7 @@ const (
 )
 
 // certs
+// from path /var/hyperledger/certs/peerOrganizations/org.rails.rzd/peers/peer0.org.rails.rzd/msp/signcerts
 const (
 	pem__peer0_rzd_rails_rzd = "CgZSWkRNU1ASigYtLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJQ0VUQ0NBYmVnQXdJQkFnSVJBTlozb05NNHFrRzV2WE5WdWtsT0Ruc3dDZ1lJS29aSXpqMEVBd0l3YlRFTApNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdUQ2tOaGJHbG1iM0p1YVdFeEZqQVVCZ05WQkFjVERWTmhiaUJHCmNtRnVZMmx6WTI4eEZqQVVCZ05WQkFvVERYSjZaQzV5WVdsc2N5NXllbVF4R1RBWEJnTlZCQU1URUdOaExuSjYKWkM1eVlXbHNjeTV5ZW1Rd0hoY05NakV3TnpFME1EZ3hOekF3V2hjTk16RXdOekV5TURneE56QXdXakJZTVFzdwpDUVlEVlFRR0V3SlZVekVUTUJFR0ExVUVDQk1LUTJGc2FXWnZjbTVwWVRFV01CUUdBMVVFQnhNTlUyRnVJRVp5CllXNWphWE5qYnpFY01Cb0dBMVVFQXhNVGNHVmxjakF1Y25wa0xuSmhhV3h6TG5KNlpEQlpNQk1HQnlxR1NNNDkKQWdFR0NDcUdTTTQ5QXdFSEEwSUFCTFluTUo5N2t4L0cxOENLUGhRMUpmSWFNenpBaEUrWXhGbmFuMTRSVFRxQgpxby9LaXpjSlJZTjVxOVNkK0sxNnVQUG56VFF2K0VxeVk5YWErM2J4RHhPalRUQkxNQTRHQTFVZER3RUIvd1FFCkF3SUhnREFNQmdOVkhSTUJBZjhFQWpBQU1Dc0dBMVVkSXdRa01DS0FJQnh0YTNycFZCcVhpbmpsQ0EyWFowZ1cKRDNTREp5dGgwak5Dbi9HODd0eEpNQW9HQ0NxR1NNNDlCQU1DQTBnQU1FVUNJUUNBVUUyUmRsckpsWWR6S20xLwpnYm5jMklob0wvUXluU0paWHl1T1JtZXRPZ0lnQitYWnNIZ1lSUlBFeXJvczFocnY3dDhsVDdtUWIyaWlPeDJoClBJQTNCS1U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
 	pem__peer0_hmk_rails_rzd = "CgZITUtNU1AShgYtLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJQ0R6Q0NBYmFnQXdJQkFnSVFSMVh4K2NTaEJ2YXZLSlRUMnZyTXRqQUtCZ2dxaGtqT1BRUURBakJ0TVFzdwpDUVlEVlFRR0V3SlZVekVUTUJFR0ExVUVDQk1LUTJGc2FXWnZjbTVwWVRFV01CUUdBMVVFQnhNTlUyRnVJRVp5CllXNWphWE5qYnpFV01CUUdBMVVFQ2hNTmFHMXJMbkpoYVd4ekxuSjZaREVaTUJjR0ExVUVBeE1RWTJFdWFHMXIKTG5KaGFXeHpMbko2WkRBZUZ3MHlNVEEzTVRRd09ERTNNREJhRncwek1UQTNNVEl3T0RFM01EQmFNRmd4Q3pBSgpCZ05WQkFZVEFsVlRNUk13RVFZRFZRUUlFd3BEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIRXcxVFlXNGdSbkpoCmJtTnBjMk52TVJ3d0dnWURWUVFERXhOd1pXVnlNQzVvYldzdWNtRnBiSE11Y25wa01Ga3dFd1lIS29aSXpqMEMKQVFZSUtvWkl6ajBEQVFjRFFnQUVyUm0zQm53REpCYzB0bk1PZ2F4OTd1ZWY1MjFDRnpHbFcxSG5ZNTdlclpzZAp3LzJpSExBdmkvb0pLNHRZUS9pd2hYTjBEMTZ5Z0g3eWEySkhqYTVjTGFOTk1Fc3dEZ1lEVlIwUEFRSC9CQVFECkFnZUFNQXdHQTFVZEV3RUIvd1FDTUFBd0t3WURWUjBqQkNRd0lvQWdRUVdOVUx5RTdDNTFOTVRJTGVPL1h6WkoKL2pzTllnMld1UjB5MERKV1loOHdDZ1lJS29aSXpqMEVBd0lEUndBd1JBSWdZL00wYmpSZ1JqaHFWSTJGeXB5cwpBSHNwYnI3T3cvS1lQckhNT3BaUlEyc0NJRldySW9NTGNuTDdoQk1oWDRHczdKdEU2RjZFcmtwbmp2ME16UHRKCmxuYksKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
@@ -45,24 +43,23 @@ const (
 
 // ref to cert map
 var refToCert = map[string]string{
-	ref__peer0_rzd_rails_rzd: pem__peer0_rzd_rails_rzd,
-	ref__peer0_hmk_rails_rzd: pem__peer0_hmk_rails_rzd,
+	ref__peer0_rzd_rails_rzd:       pem__peer0_rzd_rails_rzd,
+	ref__peer0_hmk_rails_rzd:       pem__peer0_hmk_rails_rzd,
 	ref__peer0_evrazzsmk_rails_rzd: pem__peer0_evrazzsmk_rails_rzd,
 }
 
 var logger = flogging.MustGetLogger("vscc")
 
-type DefaultValidationFactory struct{}
+type DefaultValidationFactory struct {}
 
 func (*DefaultValidationFactory) New() validation.Plugin {
 	return &DefaultValidation{}
 }
 
 type DefaultValidation struct {
-	Capabilities    vc.Capabilities
+	Capabilities    Capabilities
 	TxValidatorV1_2 TransactionValidator
 	TxValidatorV1_3 TransactionValidator
-	TxValidatorV2_0 TransactionValidator
 }
 
 //go:generate mockery -dir . -name TransactionValidator -case underscore -output mocks/
@@ -75,7 +72,7 @@ func (v *DefaultValidation) Validate(block *common.Block, namespace string, txPo
 		logger.Panicf("Expected to receive policy bytes in context data")
 	}
 
-	serializedPolicy, isSerializedPolicy := contextData[0].(vp.SerializedPolicy)
+	serializedPolicy, isSerializedPolicy := contextData[0].(SerializedPolicy)
 	if !isSerializedPolicy {
 		logger.Panicf("Expected to receive a serialized policy in the first context data")
 	}
@@ -90,11 +87,7 @@ func (v *DefaultValidation) Validate(block *common.Block, namespace string, txPo
 	}
 
 	var err error
-
 	switch {
-	case v.Capabilities.V2_0Validation():
-		err = v.TxValidatorV2_0.Validate(block, namespace, txPosition, actionPosition, serializedPolicy.Bytes())
-
 	case v.Capabilities.V1_3Validation():
 		err = v.TxValidatorV1_3.Validate(block, namespace, txPosition, actionPosition, serializedPolicy.Bytes())
 
@@ -126,10 +119,10 @@ func convertErrorTypeOrPanic(err error) error {
 }
 
 type CustomPolicyEvaluator struct {
-	original  vp.PolicyEvaluator
+	original  PolicyEvaluator
 }
 
-func setDataIdentity(data *protoutil.SignedData, identity []byte) []byte {
+func setDataIdentity(data *common.SignedData, identity []byte) []byte {
 	prespBytes := data.Data[:len(data.Data) - len(data.Identity)]
 	newData := make([]byte, len(prespBytes)+len(identity))
 	copy(newData, prespBytes)
@@ -138,7 +131,7 @@ func setDataIdentity(data *protoutil.SignedData, identity []byte) []byte {
 }
 
 // Evaluate takes a set of SignedData and evaluates whether this set of signatures satisfies the policy
-func (pe *CustomPolicyEvaluator) Evaluate(policyBytes []byte, signatureSet []*protoutil.SignedData) error {
+func (pe *CustomPolicyEvaluator) Evaluate(policyBytes []byte, signatureSet []*common.SignedData) error {
 	serializedIdentity := &msp.SerializedIdentity{}
 	err := proto.Unmarshal(signatureSet[0].Identity, serializedIdentity)
 	if err != nil {
@@ -161,30 +154,24 @@ func (pe *CustomPolicyEvaluator) Evaluate(policyBytes []byte, signatureSet []*pr
 
 func (v *DefaultValidation) Init(dependencies ...validation.Dependency) error {
 	var (
-		d   vi.IdentityDeserializer
-		c   vc.Capabilities
-		sf  vs.StateFetcher
-		pe  vp.PolicyEvaluator
-		cor plugindispatcher.CollectionResources
+		d  IdentityDeserializer
+		c  Capabilities
+		sf StateFetcher
+		pe PolicyEvaluator
 	)
 	for _, dep := range dependencies {
-		if deserializer, isIdentityDeserializer := dep.(vi.IdentityDeserializer); isIdentityDeserializer {
+		if deserializer, isIdentityDeserializer := dep.(IdentityDeserializer); isIdentityDeserializer {
 			d = deserializer
 		}
-
-		if capabilities, isCapabilities := dep.(vc.Capabilities); isCapabilities {
+		if capabilities, isCapabilities := dep.(Capabilities); isCapabilities {
 			c = capabilities
 		}
-		if stateFetcher, isStateFetcher := dep.(vs.StateFetcher); isStateFetcher {
+		if stateFetcher, isStateFetcher := dep.(StateFetcher); isStateFetcher {
 			sf = stateFetcher
 		}
-		if policyEvaluator, isPolicyFetcher := dep.(vp.PolicyEvaluator); isPolicyFetcher {
+		if policyEvaluator, isPolicyFetcher := dep.(PolicyEvaluator); isPolicyFetcher {
 			pe = policyEvaluator
 			pe = &CustomPolicyEvaluator{pe}
-		}
-
-		if collectionResources, isCollectionResources := dep.(plugindispatcher.CollectionResources); isCollectionResources {
-			cor = collectionResources
 		}
 	}
 	if sf == nil {
@@ -199,14 +186,10 @@ func (v *DefaultValidation) Init(dependencies ...validation.Dependency) error {
 	if pe == nil {
 		return errors.New("policy fetcher not passed in init")
 	}
-	if cor == nil {
-		return errors.New("collection resources not passed in init")
-	}
 
 	v.Capabilities = c
 	v.TxValidatorV1_2 = v12.New(c, sf, d, pe)
 	v.TxValidatorV1_3 = v13.New(c, sf, d, pe)
-	v.TxValidatorV2_0 = v20.New(c, sf, d, pe, cor)
 
 	return nil
 }
