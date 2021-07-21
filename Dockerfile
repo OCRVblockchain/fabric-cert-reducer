@@ -13,6 +13,7 @@ EXPOSE 7051
 # ENV CORE_PEER_MSPCONFIGPATH $FABRIC_CFG_PATH/msp
 
 COPY . .
+COPY core.yaml /var/hyperledger/config/core.yaml
 RUN go build -buildmode=plugin -o=customEndorsement.so custom_endorsement.go
 RUN mkdir /etc/hyperledger/fabric/plugins
 RUN cp customEndorsement.so /etc/hyperledger/fabric/plugins
