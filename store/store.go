@@ -4,7 +4,13 @@ import (
 	"crypto/sha256"
 	"sync"
 	"time"
+
+	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/patrickmn/go-cache"
+	"github.com/syndtr/goleveldb/leveldb"
 )
+
+var logger = flogging.MustGetLogger("certstore")
 
 const dbFile = ".cert_cache"
 
@@ -34,12 +40,12 @@ func Save(cert []byte) []byte {
 	return id
 }
 
-func Get(id []byte) []byte {
+func Get(id []byte) ([]byte, error) {
 	store.RLock()
 	defer store.RUnlock()
 
 	if cert, exists := store.cache.Get(string(id)); exists {
-		return cert.([]byte)
+		return cert.([]byte), nil
 	}
 
 	return store.db.Get(id, nil)

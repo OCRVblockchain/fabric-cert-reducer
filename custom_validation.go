@@ -7,11 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	b64 "encoding/base64"
 	"fmt"
 	"reflect"
 
-	"github.com/OCRVblockchain/fabric-cert-reducer/store"
 	"github.com/golang/protobuf/proto"
 	commonerrors "github.com/hyperledger/fabric/common/errors"
 	"github.com/hyperledger/fabric/common/flogging"
@@ -24,12 +22,13 @@ import (
 	v13 "github.com/hyperledger/fabric/core/handlers/validation/builtin/v13"
 	"github.com/hyperledger/fabric/protos/common"
 	"github.com/hyperledger/fabric/protos/msp"
-	"github.com/pkg/errors"
+
+	"./store"
 )
 
 var logger = flogging.MustGetLogger("vscc")
 
-type DefaultValidationFactory struct {}
+type DefaultValidationFactory struct{}
 
 func (*DefaultValidationFactory) New() validation.Plugin {
 	return &DefaultValidation{}
@@ -56,13 +55,13 @@ func (v *DefaultValidation) Validate(block *common.Block, namespace string, txPo
 		logger.Panicf("Expected to receive a serialized policy in the first context data")
 	}
 	if block == nil || block.Data == nil {
-		return errors.New("empty block")
+		return fmt.Errorf("empty block")
 	}
 	if txPosition >= len(block.Data.Data) {
-		return errors.Errorf("block has only %d transactions, but requested tx at position %d", len(block.Data.Data), txPosition)
+		return fmt.Errorf("block has only %d transactions, but requested tx at position %d", len(block.Data.Data), txPosition)
 	}
 	if block.Header == nil {
-		return errors.Errorf("no block header")
+		return fmt.Errorf("no block header")
 	}
 
 	var err error
@@ -98,11 +97,11 @@ func convertErrorTypeOrPanic(err error) error {
 }
 
 type CustomPolicyEvaluator struct {
-	original  PolicyEvaluator
+	original PolicyEvaluator
 }
 
 func setDataIdentity(data *common.SignedData, identity []byte) []byte {
-	prespBytes := data.Data[:len(data.Data) - len(data.Identity)]
+	prespBytes := data.Data[:len(data.Data)-len(data.Identity)]
 	newData := make([]byte, len(prespBytes)+len(identity))
 	copy(newData, prespBytes)
 	copy(newData[len(prespBytes):], identity)
@@ -119,7 +118,10 @@ func (pe *CustomPolicyEvaluator) Evaluate(policyBytes []byte, signatureSet []*co
 
 	sigSet := signatureSet
 	//ref := string(serializedIdentity.IdBytes)
-	id := store.Get(serializedIdentity.IdBytes)
+	id, err := store.Get(serializedIdentity.IdBytes)
+	if err != nil {
+		panic(err)
+	}
 
 	//if pem, ok := refToCert[ref]; ok {
 	//sDec, _ := b64.StdEncoding.DecodeString(pem)
@@ -156,16 +158,16 @@ func (v *DefaultValidation) Init(dependencies ...validation.Dependency) error {
 		}
 	}
 	if sf == nil {
-		return errors.New("stateFetcher not passed in init")
+		return fmt.Errorf("stateFetcher not passed in init")
 	}
 	if d == nil {
-		return errors.New("identityDeserializer not passed in init")
+		return fmt.Errorf("identityDeserializer not passed in init")
 	}
 	if c == nil {
-		return errors.New("capabilities not passed in init")
+		return fmt.Errorf("capabilities not passed in init")
 	}
 	if pe == nil {
-		return errors.New("policy fetcher not passed in init")
+		return fmt.Errorf("policy fetcher not passed in init")
 	}
 
 	v.Capabilities = c

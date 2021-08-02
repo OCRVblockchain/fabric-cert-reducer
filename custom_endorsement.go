@@ -10,12 +10,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/OCRVblockchain/fabric-cert-reducer/store"
 	"github.com/golang/protobuf/proto"
 	endorsement "github.com/hyperledger/fabric/core/handlers/endorsement/api"
 	identities "github.com/hyperledger/fabric/core/handlers/endorsement/api/identities"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/hyperledger/fabric/protos/peer"
+
+	"./store"
 )
 
 // To build the plugin,
